@@ -1,0 +1,8 @@
+image: python:3.10
+tasks:
+  - init: |
+      pip install -r requirements.txt
+      pip install --use-feature=in-tree-build --editable .
+vscode:
+  extensions:
+    - ms-python.python

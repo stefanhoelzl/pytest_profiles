@@ -1,0 +1,11 @@
+[run]
+command_line = -m pytest
+branch = True
+source = pytest_profiles
+
+
+[report]
+fail_under = 100
+show_missing = True
+exclude_lines = 
+    @overload

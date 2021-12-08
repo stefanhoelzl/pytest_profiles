@@ -1,0 +1,16 @@
+# caches
+.mypy_cache
+.pytest_cache
+__pycache__
+
+# coverage
+.coverage
+.coverage.ws*
+cov_html
+
+# build
+venv
+pytest_profiles.egg-info
+build
+dist
+changelog.md

@@ -1,0 +1,142 @@
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "release-candidate"
+name: push
+jobs:
+  cleanup:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Clean Up Release Candiate Tag
+        if: ${{ github.ref == 'refs/tags/release-candidate' }}
+        uses: dev-drprasad/delete-tag-and-release@v0.2.0
+        with:
+          tag_name: release-candidate
+          delete_release: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v1.2.0
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: "3.10"
+      - name: Install Requirements
+        run: |
+          pip install -r requirements.txt
+      - name: Build Wheel
+        run: |
+          python setup.py bdist_wheel
+      - name: Upload Wheel
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheel
+          path: dist
+  test:
+    strategy:
+      matrix:
+        python: ["3.10", "3.9", "3.8", "3.7"]
+        os: [ubuntu-20.04, macos-10.15, windows-2019]
+    runs-on: ${{matrix.os}}
+    needs: [build]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v1.2.0
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{matrix.python}}
+      - name: Download Wheel
+        uses: actions/download-artifact@v2
+        with:
+          name: wheel
+          path: dist
+      - name: Install Requirements
+        run: |
+          pip install -r requirements.txt
+          pip install --use-feature=in-tree-build --editable .
+      - name: Run Unit Tests
+        run: |
+          pytest
+  coverage:
+    runs-on: ubuntu-20.04
+    needs: [build]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v1.2.0
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: "3.10"
+      - name: Download Wheel
+        uses: actions/download-artifact@v2
+        with:
+          name: wheel
+          path: dist
+      - name: Install Requirements
+        run: |
+          pip install -r requirements.txt
+          pip install --use-feature=in-tree-build --editable .
+      - name: Run Coverage
+        run: |
+          coverage run
+          coverage report
+  release:
+    runs-on: ubuntu-20.04
+    needs: [test, coverage]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v1.2.0
+        with:
+          fetch-depth: 0
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: "3.10"
+      - name: Install Requirements
+        run: |
+          pip install -r requirements.txt
+      - name: Download Wheel
+        uses: actions/download-artifact@v2
+        with:
+          name: wheel
+          path: dist
+      - name: Check Commit Messages
+        run: |
+          release check-commit-messages
+      - name: Generate Changelog
+        run: |
+          release changelog > changelog.md
+      - name: Delete Previous Main Github Release
+        if: ${{ github.ref == 'refs/heads/main' }}
+        uses: dev-drprasad/delete-tag-and-release@v0.2.0
+        with:
+          tag_name: main
+          delete_release: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish Main Github Release
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: |
+          gh release create main ./dist/*.whl -F changelog.md --prerelease
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish Github Release
+        if: ${{ github.ref == 'refs/tags/release-candidate' }}
+        run: |
+          gh release create v`release version` ./dist/*.whl -F changelog.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish PyPI
+        if: ${{ github.ref == 'refs/tags/release-candidate' }}
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          repository_url: https://upload.pypi.org/legacy/
+          skip_existing: false
