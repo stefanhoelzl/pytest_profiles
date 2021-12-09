@@ -62,7 +62,7 @@ jobs:
           pip install --use-feature=in-tree-build --editable .
       - name: Run Unit Tests
         run: |
-          pytest
+          pytest --profile ci --cache-clear
   coverage:
     runs-on: ubuntu-20.04
     needs: [build]
