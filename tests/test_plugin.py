@@ -6,13 +6,13 @@ import pytest
 from _pytest.config import Config
 from _pytest.config.exceptions import UsageError
 
-from pytest_profiles.profile import Profile, RegisteredProfiles
+from pytest_profiles.profile import profile
 
 
 @pytest.mark.parametrize("profiles", [["single"], ["first", "second"]])
 def test_addoption(pytester: pytest.Pytester, profiles: List[str]) -> None:
-    for profile in profiles:
-        RegisteredProfiles[profile] = Profile(lambda c: None)
+    for name in profiles:
+        profile(name=name)(lambda c: None)
 
     config = pytester.parseconfig(
         *chain.from_iterable(("--profile", profile) for profile in profiles)
@@ -30,24 +30,12 @@ def test_addoption_usage_error(pytester: pytest.Pytester) -> None:
 
 
 def test_configure(pytester: pytest.Pytester) -> None:
+    @profile
     def set_verbose(config: Config) -> None:
         config.option.verbose = 1
-
-    RegisteredProfiles["profile"] = Profile(apply=set_verbose)
 
     config = pytester.parseconfigure()
     assert config.option.verbose == 0
 
-    config = pytester.parseconfigure("--profile", "profile")
-    assert config.option.verbose == 1
-
-
-def test_configure_autouse(pytester: pytest.Pytester) -> None:
-    def set_verbose(config: Config) -> None:
-        config.option.verbose = 1
-
-    RegisteredProfiles["profile"] = Profile(apply=set_verbose, autouse=True)
-
-    config = pytester.parseconfigure()
-
+    config = pytester.parseconfigure("--profile", "set_verbose")
     assert config.option.verbose == 1

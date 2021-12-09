@@ -4,7 +4,7 @@ import pytest
 from _pytest.config import Config
 from _pytest.config.argparsing import Parser
 
-from .profile import RegisteredProfiles
+from .profile import RegisteredProfiles, resolve_profiles
 
 
 def pytest_addoption(parser: Parser) -> None:
@@ -13,12 +13,7 @@ def pytest_addoption(parser: Parser) -> None:
 
 
 @pytest.mark.tryfirst
-def pytest_configure(config: Config) -> None:  # pylint: disable=unused-argument
+def pytest_configure(config: Config) -> None:
     """configures pytest according to the given profiles."""
-    profiles = [profile for profile in RegisteredProfiles.values() if profile.autouse]
-    if config.option.profile is not None:
-        profiles.extend(
-            [RegisteredProfiles[profile] for profile in config.option.profile]
-        )
-    for profile in profiles:
+    for profile in resolve_profiles(config.option.profile):
         profile.apply(config)
