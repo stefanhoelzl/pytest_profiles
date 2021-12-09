@@ -4,12 +4,12 @@ import pytest
 from _pytest.config import Config
 from _pytest.config.argparsing import Parser
 
-from .profile import RegisteredProfiles, resolve_profiles
+from .profile import resolve_profiles
 
 
 def pytest_addoption(parser: Parser) -> None:
     """Adds a profile option to pytest"""
-    parser.addoption("--profile", action="append", choices=RegisteredProfiles.keys())
+    parser.addoption("--profile", action="append")
 
 
 @pytest.mark.tryfirst

@@ -5,6 +5,7 @@ from collections import OrderedDict
 from typing import (
     Callable,
     Generator,
+    Iterable,
     List,
     MutableMapping,
     NamedTuple,
@@ -52,26 +53,15 @@ def profile(
     uses: Optional[Union[str, List[str]]] = None,
 ) -> Union[Profile, Callable[[Callable[[Config], None]], Profile]]:
     """decorator to create pytest configuration profiles."""
-    uses = _handle_uses(uses)
+    if isinstance(uses, str):
+        uses = [uses]
+
     if apply is None:
         return functools.partial(profile, name=name, autouse=autouse, uses=uses)
 
     name = name or apply.__name__
     RegisteredProfiles[name] = Profile(apply=apply, autouse=autouse, uses=uses)
     return RegisteredProfiles[name]
-
-
-def _handle_uses(uses: Optional[Union[str, List[str]]]) -> Optional[List[str]]:
-    if isinstance(uses, str):
-        uses = [uses]
-
-    unregistered_uses = (
-        list(filter(lambda p: p not in RegisteredProfiles, uses)) if uses else []
-    )
-    if unregistered_uses:
-        raise ValueError(f"used unregistered profiles: {','.join(unregistered_uses)}")
-
-    return uses
 
 
 def resolve_profiles(
@@ -91,12 +81,20 @@ def resolve_profiles(
     )
 
     deduplicated = OrderedDict((n, None) for n in with_dependecies).keys()
+    _check_for_unregistered_profiles(deduplicated)
     for profile_name in deduplicated:
         yield RegisteredProfiles[profile_name]
 
 
 def _with_dependencies(profile_name: str) -> Generator[str, None, None]:
-    for dependency in RegisteredProfiles[profile_name].uses or []:
-        yield from _with_dependencies(dependency)
-        yield dependency
+    if profile_name in RegisteredProfiles:
+        for dependency in RegisteredProfiles[profile_name].uses or []:
+            yield from _with_dependencies(dependency)
+            yield dependency
     yield profile_name
+
+
+def _check_for_unregistered_profiles(profile_names: Iterable[str]) -> None:
+    unregistered = [n for n in profile_names if n not in RegisteredProfiles]
+    if unregistered:
+        raise ValueError(f"unregistered profiles used: {', '.join(unregistered)}")

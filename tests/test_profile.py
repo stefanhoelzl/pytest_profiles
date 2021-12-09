@@ -38,9 +38,6 @@ def test_uses() -> None:
     assert profile(uses="single")(lambda c: None).uses == ["single"]
     assert profile(uses=["first", "second"])(lambda c: None).uses == ["first", "second"]
 
-    with pytest.raises(ValueError):
-        profile(uses="not-registered")
-
 
 def test_resolve_profiles_arguments() -> None:
     _profile = profile(name="profile")(lambda c: None)
@@ -68,3 +65,8 @@ def test_resolve_profiles_keep_order() -> None:
     first = profile(name="first", autouse=True)(lambda c: None)
     second = profile(name="second", autouse=True)(lambda c: None)
     assert list(resolve_profiles(profiles=["first"])) == [first, second]
+
+
+def test_resolve_profiles_value_error_on_unregistered_profile() -> None:
+    with pytest.raises(ValueError):
+        list(resolve_profiles(profiles=["first"]))
