@@ -6,29 +6,6 @@ from pytest_profiles import profile
 pytest_plugins = ["pytester"]
 
 
-@profile
-def mypy(config: Config) -> None:
-    """profile for mypy."""
-    config.option.mypy = True
-    config.option.mypy_ignore_missing_imports = True
-    try:
-        config.pluginmanager.getplugin("mypy").mypy_argv.extend(
-            ["--strict", "--implicit-reexport"]
-        )
-    except AttributeError:
-        pass
-
-
-@profile
-def mccabe(config: Config) -> None:
-    """profile for mccabe code complexity"""
-    config.option.mccabe = True
-    try:
-        config.addinivalue_line("mccabe-complexity", "3")
-    except ValueError:
-        pass
-
-
 @profile(autouse=True, uses=["mypy", "mccabe"])
 def default(config: Config) -> None:
     """Setup default pytest options."""
@@ -38,9 +15,13 @@ def default(config: Config) -> None:
     config.option.durations = 0
     config.option.durations_min = 1
 
-    config.option.pylint = True
     config.option.black = True
     config.option.isort = True
+
+    if config.option.file_or_dir or config.option.keyword:
+        config.option.verbose = 1
+    else:
+        config.option.pylint = True
 
 
 @profile
@@ -67,3 +48,26 @@ def compatibility(config: Config) -> None:
     config.option.mypy = False
     config.option.mccabe = False
     config.option.pylint = False
+
+
+@profile
+def mypy(config: Config) -> None:
+    """profile for mypy."""
+    config.option.mypy = True
+    config.option.mypy_ignore_missing_imports = True
+    try:
+        config.pluginmanager.getplugin("mypy").mypy_argv.extend(
+            ["--strict", "--implicit-reexport"]
+        )
+    except AttributeError:
+        pass
+
+
+@profile
+def mccabe(config: Config) -> None:
+    """profile for mccabe code complexity"""
+    config.option.mccabe = True
+    try:
+        config.addinivalue_line("mccabe-complexity", "3")
+    except ValueError:
+        pass
