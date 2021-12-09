@@ -68,6 +68,6 @@ def mccabe(config: Config) -> None:
     """profile for mccabe code complexity"""
     config.option.mccabe = True
     try:
-        config.addinivalue_line("mccabe-complexity", "3")
+        config.addinivalue_line("mccabe-complexity", "4")
     except ValueError:
         pass

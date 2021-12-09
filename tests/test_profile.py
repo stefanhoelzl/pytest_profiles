@@ -2,7 +2,13 @@
 import pytest
 from _pytest.config import Config  # pylint: disable=protected-access
 
-from pytest_profiles.profile import RegisteredProfiles, profile, resolve_profiles
+from pytest_profiles.profile import (
+    ProfileCycleDetected,
+    RegisteredProfiles,
+    UnknownProfiles,
+    profile,
+    resolve_profiles,
+)
 
 
 def test_create_and_apply(pytester: pytest.Pytester) -> None:
@@ -67,6 +73,14 @@ def test_resolve_profiles_keep_order() -> None:
     assert list(resolve_profiles(profiles=["first"])) == [first, second]
 
 
-def test_resolve_profiles_value_error_on_unregistered_profile() -> None:
-    with pytest.raises(ValueError):
+def test_resolve_profiles_value_error_on_unknown_profile() -> None:
+    with pytest.raises(UnknownProfiles):
+        list(resolve_profiles(profiles=["first"]))
+
+
+def test_resolve_profiles_detect_cycles() -> None:
+    profile(name="first", uses="second")(lambda c: None)
+    profile(name="second", uses="first")(lambda c: None)
+
+    with pytest.raises(ProfileCycleDetected):
         list(resolve_profiles(profiles=["first"]))

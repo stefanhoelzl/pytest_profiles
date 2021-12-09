@@ -16,6 +16,25 @@ from typing import (
 
 from _pytest.config import Config  # pylint: disable=protected-access
 
+
+class PytestProfilesException(Exception):
+    """Base for pytest profiles exceptions."""
+
+
+class UnknownProfiles(PytestProfilesException):
+    """Exception for using a unknown profile."""
+
+    def __init__(self, unkonwn_profiles: Iterable[str]) -> None:
+        super().__init__(f"unregistered profiles used: {', '.join(unkonwn_profiles)}")
+
+
+class ProfileCycleDetected(PytestProfilesException):
+    """Exception when an cycle in the profile definitions is detected."""
+
+    def __init__(self, cycle: Iterable[str]) -> None:
+        super().__init__(f"profile cycle detected: {' -> '.join(cycle)}")
+
+
 RegisteredProfiles: MutableMapping[str, "Profile"] = OrderedDict()
 
 
@@ -81,20 +100,24 @@ def resolve_profiles(
     )
 
     deduplicated = OrderedDict((n, None) for n in with_dependecies).keys()
-    _check_for_unregistered_profiles(deduplicated)
+    _check_for_unknown_profiles(deduplicated)
     for profile_name in deduplicated:
         yield RegisteredProfiles[profile_name]
 
 
-def _with_dependencies(profile_name: str) -> Generator[str, None, None]:
+def _with_dependencies(
+    profile_name: str, chain: Optional[List[str]] = None
+) -> Generator[str, None, None]:
     if profile_name in RegisteredProfiles:
+        chain = chain or []
+        if profile_name in chain:
+            raise ProfileCycleDetected([*chain, profile_name])
         for dependency in RegisteredProfiles[profile_name].uses or []:
-            yield from _with_dependencies(dependency)
-            yield dependency
+            yield from _with_dependencies(dependency, chain=[*chain, profile_name])
     yield profile_name
 
 
-def _check_for_unregistered_profiles(profile_names: Iterable[str]) -> None:
-    unregistered = [n for n in profile_names if n not in RegisteredProfiles]
-    if unregistered:
-        raise ValueError(f"unregistered profiles used: {', '.join(unregistered)}")
+def _check_for_unknown_profiles(profile_names: Iterable[str]) -> None:
+    unknown = [n for n in profile_names if n not in RegisteredProfiles]
+    if unknown:
+        raise UnknownProfiles(unknown)
