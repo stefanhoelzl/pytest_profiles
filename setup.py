@@ -35,7 +35,7 @@ setup(
     ],
     packages=[ProjectName],
     install_requires=[
-        "pytest>=4.6",
+        "pytest>=3.7.0",
     ],
     entry_points={
         "pytest11": [

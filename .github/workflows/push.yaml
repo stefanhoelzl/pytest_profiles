@@ -28,7 +28,7 @@ jobs:
           python-version: "3.10"
       - name: Install Requirements
         run: |
-          pip install -r requirements.txt
+          pip install -r requirements/build.txt
       - name: Build Wheel
         run: |
           python setup.py bdist_wheel
@@ -51,11 +51,6 @@ jobs:
         uses: actions/setup-python@v1
         with:
           python-version: ${{matrix.python}}
-      - name: Download Wheel
-        uses: actions/download-artifact@v2
-        with:
-          name: wheel
-          path: dist
       - name: Install Requirements
         run: |
           pip install -r requirements.txt
@@ -73,11 +68,6 @@ jobs:
         uses: actions/setup-python@v1
         with:
           python-version: "3.10"
-      - name: Download Wheel
-        uses: actions/download-artifact@v2
-        with:
-          name: wheel
-          path: dist
       - name: Install Requirements
         run: |
           pip install -r requirements.txt
@@ -86,9 +76,43 @@ jobs:
         run: |
           coverage run
           coverage report
+  compatibility:
+    strategy:
+      matrix:
+        pytest: ["3", "4", "5", "6"]
+    runs-on: ubuntu-20.04
+    needs: [build]
+    env:
+      PYTEST_PROFILE_AUTOUSE: ""
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v1.2.0
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: "3.7"
+      - name: Install Requirements
+        run: |
+          pip install -r requirements/build.txt
+          pip install pytest==${{matrix.pytest}}.*
+          pip install --use-feature=in-tree-build --editable .
+      - name: Run Compatiblity Check Autouse
+        run: |
+          pytest --cache-clear --profile compatibility tests/compatibility
+      - name: Run Compatiblity Check Custom Name
+        run: |
+          pytest --cache-clear --profile compatibility --profile custom tests/compatibility
+        env:
+          PYTEST_PROFILE_CUSTOM_NAME: ""
+      - name: Run Compatiblity Check Uses
+        run: |
+          pytest --cache-clear --profile compatibility --profile uses tests/compatibility
+        env:
+          PYTEST_PROFILE_DEPENDENCY: ""
+          PYTEST_PROFILE_USES: ""
   release:
     runs-on: ubuntu-20.04
-    needs: [test, coverage]
+    needs: [test, coverage, compatibility]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v1.2.0
