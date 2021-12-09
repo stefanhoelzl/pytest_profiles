@@ -49,6 +49,7 @@ def ci(config: Config) -> None:  # pylint: disable=invalid-name
     config.option.newfirst = False
     config.option.failedfirst = False
     config.option.verbose = 1
+    config.option.cacheclear = True
 
 
 @profile

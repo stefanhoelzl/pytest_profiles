@@ -57,7 +57,7 @@ jobs:
           pip install --use-feature=in-tree-build --editable .
       - name: Run Unit Tests
         run: |
-          pytest --profile ci --cache-clear
+          pytest --profile ci
   coverage:
     runs-on: ubuntu-20.04
     needs: [build]
@@ -98,15 +98,15 @@ jobs:
           pip install --use-feature=in-tree-build --editable .
       - name: Run Compatiblity Check Autouse
         run: |
-          pytest --cache-clear --profile compatibility tests/compatibility
+          pytest --profile compatibility tests/compatibility
       - name: Run Compatiblity Check Custom Name
         run: |
-          pytest --cache-clear --profile compatibility --profile custom tests/compatibility
+          pytest --profile compatibility --profile custom tests/compatibility
         env:
           PYTEST_PROFILE_CUSTOM_NAME: ""
       - name: Run Compatiblity Check Uses
         run: |
-          pytest --cache-clear --profile compatibility --profile uses tests/compatibility
+          pytest --profile compatibility --profile uses tests/compatibility
         env:
           PYTEST_PROFILE_DEPENDENCY: ""
           PYTEST_PROFILE_USES: ""
